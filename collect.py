@@ -85,6 +85,15 @@ def collect():
         for item in page_items: candidates.setdefault(item['name'].lower(), item)
     items = sorted(candidates.values(), key=lambda x: (-x['daily_stars'], x['name'].lower()))[:20]
     if len(items) < 20: raise ValueError(f'只读取到 {len(items)} 个项目，拒绝写入不完整榜单')
+    # A README excerpt provides context when the Trending description is absent.
+    for item in items:
+        if not item['original_description']:
+            try:
+                request = urllib.request.Request('https://api.github.com/repos/' + item['name'] + '/readme', headers={'User-Agent':'StarDaily/1.0', 'Accept':'application/vnd.github.raw+json'})
+                with urllib.request.urlopen(request, timeout=20) as response:
+                    item['original_description'] = response.read(5000).decode('utf-8', errors='replace')
+            except Exception as exc:
+                print(f"无法读取 {item['name']} 的 README：{exc}", file=sys.stderr)
     summaries = summarize(items)
     now = dt.datetime.now(ZoneInfo('Asia/Shanghai')); day = now.date().isoformat()
     with connect() as db:
