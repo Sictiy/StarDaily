@@ -5,7 +5,7 @@ const number = new Intl.NumberFormat('en-US');
 const escapeHTML = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 async function load(date) {
   try {
-    const response = await fetch('/api/editions' + (date ? '?date=' + encodeURIComponent(date) : ''));
+    const response = await fetch('./api/editions' + (date ? '?date=' + encodeURIComponent(date) : ''));
     if (!response.ok) throw new Error('request failed');
     const data = await response.json();
     select.innerHTML = data.dates.length ? data.dates.map(d => `<option value="${escapeHTML(d)}" ${d === data.edition?.date ? 'selected' : ''}>${escapeHTML(d)}</option>`).join('') : '<option>暂无数据</option>';

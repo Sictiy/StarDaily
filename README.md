@@ -13,7 +13,7 @@ cd /root/workspace/github-star-daily
 python3 app.py
 ```
 
-浏览器打开 <http://127.0.0.1:8000>。可通过 `HOST`、`PORT`、`STAR_DAILY_DB` 环境变量调整监听地址、端口和数据库路径。默认数据库是 `data/stars.db`。服务运行后可另开终端手动采集：
+浏览器打开 <http://127.0.0.1:8000>。服务器部署时通过 Nginx 在 <https://xulm.host/stars/> 提供访问，systemd 服务监听 `127.0.0.1:4200`。可通过 `HOST`、`PORT`、`STAR_DAILY_DB` 环境变量调整监听地址、端口和数据库路径。默认数据库是 `data/stars.db`。服务运行后可另开终端手动采集：
 
 ```sh
 python3 collect.py
