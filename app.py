@@ -34,9 +34,9 @@ class Handler(BaseHTTPRequestHandler):
         if url.path == '/api/editions':
             data = read_edition(parse_qs(url.query).get('date', [None])[0])
             self.respond(200, json.dumps(data, ensure_ascii=False).encode(), 'application/json; charset=utf-8')
-        elif url.path in ('/', '/style.css', '/app.js'):
+        elif url.path in ('/', '/style.css', '/app.js', '/mark.svg'):
             filename = 'index.html' if url.path == '/' else url.path[1:]
-            content_type = {'index.html':'text/html', 'style.css':'text/css', 'app.js':'text/javascript'}[filename]
+            content_type = {'index.html':'text/html', 'style.css':'text/css', 'app.js':'text/javascript', 'mark.svg':'image/svg+xml'}[filename]
             self.respond(200, (ROOT / 'static' / filename).read_bytes(), content_type + '; charset=utf-8')
         else:
             self.respond(404, b'Not found', 'text/plain')
