@@ -14,6 +14,7 @@ from zoneinfo import ZoneInfo
 from app import ROOT, connect
 
 SOURCE = 'https://github.com/trending?since=daily'
+SOURCES = [SOURCE] + [f'https://github.com/trending/{language}?since=daily' for language in ('python', 'javascript', 'typescript', 'rust', 'go', 'java', 'c%2B%2B', 'shell')]
 
 class Node:
     def __init__(self, tag='', attrs=()):
@@ -60,8 +61,7 @@ def parse_trending(html):
         total_match = re.search(r'[\d,]+', total.text())
         if not total_match: raise ValueError('无法读取 Star 总数')
         items.append({'name':name, 'url':'https://github.com/' + name, 'original_description':' '.join(desc.text().split()) if desc else '', 'language':' '.join(language.text().split()) if language else '', 'total_stars':int(total_match.group().replace(',','')), 'daily_stars':int(daily_match.group(1).replace(',',''))})
-    if len(items) < 20: raise ValueError(f'只读取到 {len(items)} 个项目，拒绝写入不完整榜单')
-    return sorted(items, key=lambda x: (-x['daily_stars'], x['name'].lower()))[:20]
+    return items
 
 def summarize(items):
     schema = {'type':'object','properties':{'items':{'type':'array','items':{'type':'object','properties':{'name':{'type':'string'},'summary':{'type':'string'}},'required':['name','summary'],'additionalProperties':False}}},'required':['items'],'additionalProperties':False}
@@ -76,9 +76,15 @@ def summarize(items):
     return summaries
 
 def collect():
-    req = urllib.request.Request(SOURCE, headers={'User-Agent':'StarDaily/1.0','Accept-Language':'en-US,en;q=0.9'})
-    with urllib.request.urlopen(req, timeout=45) as response: html = response.read().decode('utf-8')
-    items = parse_trending(html)
+    candidates = {}
+    for source in SOURCES:
+        req = urllib.request.Request(source, headers={'User-Agent':'StarDaily/1.0','Accept-Language':'en-US,en;q=0.9'})
+        with urllib.request.urlopen(req, timeout=45) as response: html = response.read().decode('utf-8')
+        page_items = parse_trending(html)
+        if not page_items: raise ValueError(f'候选页面为空：{source}')
+        for item in page_items: candidates.setdefault(item['name'].lower(), item)
+    items = sorted(candidates.values(), key=lambda x: (-x['daily_stars'], x['name'].lower()))[:20]
+    if len(items) < 20: raise ValueError(f'只读取到 {len(items)} 个项目，拒绝写入不完整榜单')
     summaries = summarize(items)
     now = dt.datetime.now(ZoneInfo('Asia/Shanghai')); day = now.date().isoformat()
     with connect() as db:

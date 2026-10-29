@@ -11,14 +11,14 @@ def html_card(i):
 
 class CoreTests(unittest.TestCase):
     def test_trending_sorted_by_daily_stars(self):
-        result = parse_trending(''.join(html_card(i) for i in range(1, 26)))
+        result = sorted(parse_trending(''.join(html_card(i) for i in range(1, 26))), key=lambda i: -i['daily_stars'])[:20]
         self.assertEqual(len(result), 20)
         self.assertEqual(result[0]['name'], 'owner/repo25')
         self.assertEqual(result[0]['daily_stars'], 25)
         self.assertEqual(result[-1]['daily_stars'], 6)
         self.assertEqual(result[0]['total_stars'], 1025)
-    def test_incomplete_page_is_rejected(self):
-        with self.assertRaises(ValueError): parse_trending(html_card(1))
+    def test_malformed_card_is_rejected(self):
+        with self.assertRaises(ValueError): parse_trending('<article class="Box-row"><h2>bad</h2></article>')
     def test_database_read_and_replacement(self):
         with tempfile.TemporaryDirectory() as temp:
             old = app.DB; app.DB = Path(temp) / 'test.db'

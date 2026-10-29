@@ -1,8 +1,8 @@
 # Star Daily
 
-一个简洁的 GitHub 每日升星榜。每天北京时间 08:00 采集 GitHub Trending 的今日热门候选项目，按页面显示的 `stars today` 排序取前 20，调用本机 Codex CLI 生成中文简介，保存到 SQLite。网站支持查看历史榜单。
+一个简洁的 GitHub 每日升星榜。每天北京时间 08:00 采集 GitHub Trending 综合页及 Python、JavaScript、TypeScript、Rust、Go、Java、C++、Shell 语言页的今日热门候选项目，按页面显示的 `stars today` 排序取前 20，调用本机 Codex CLI 生成中文简介，保存到 SQLite。网站支持查看历史榜单。
 
-**统计口径**：GitHub Trending 是 GitHub 选出的热门候选集，并非全站所有仓库；榜单是该候选集按新增星数排序的前 20，不能视作全站升星前 20。GitHub 的“today”窗口不一定是北京时间自然日或精确的前 24 小时。
+**统计口径**：GitHub Trending 综合页及指定语言页是 GitHub 选出的热门候选集，并非全站所有仓库；榜单是该候选集按新增星数排序的前 20，不能视作全站升星前 20。GitHub 的“today”窗口不一定是北京时间自然日或精确的前 24 小时。
 
 ## 运行
 
