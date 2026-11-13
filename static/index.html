@@ -19,16 +19,19 @@
   <section class="board" aria-labelledby="board-title">
     <div class="board-head">
       <div>
-        <div class="section-label">DAILY RANKING <span>/ 01 — 20</span></div>
+        <div class="section-label"><span id="ranking-label">DAILY RANKING</span> <span>/ 01 — 20</span></div>
         <h1 id="board-title">每日升星榜<span class="title-dot">.</span></h1>
         <p>每天发现值得关注的开源项目。</p>
       </div>
-      <div class="date-control"><label for="edition">榜单日期</label><select id="edition" aria-label="查看榜单日期"><option>暂无数据</option></select></div>
+      <div class="filters">
+        <div class="date-control"><label for="period">榜单</label><select id="period" aria-label="选择榜单"><option value="daily" selected>每日升星榜</option><option value="weekly">近七日升星榜</option></select></div>
+        <div class="date-control"><label for="edition">榜单日期</label><select id="edition" aria-label="查看榜单日期"><option value="">暂无数据</option></select></div>
+      </div>
     </div>
-    <div class="board-meta"><span>排名 / 项目</span><span>今日升星</span></div>
+    <div class="board-meta"><span>排名 / 项目</span><span id="stars-heading">今日升星</span></div>
     <div id="list" aria-live="polite"><div class="empty"><img src="./mark.svg" alt="" width="48" height="48"><h2>榜单还在路上</h2><p>首次采集完成后，榜单会出现在这里。</p></div></div>
     <div class="board-foot"><span><span class="foot-dot"></span><span id="updated">等待首次采集</span></span><span>北京时间 · 08:00</span></div>
-    <p class="method">按热门候选项目的今日新增星数排序，并非全站完整排名。</p>
+    <p class="method" id="method">按热门候选项目的今日新增星数排序，并非全站完整排名。</p>
   </section>
 </main>
 <footer class="wrap footer"><span>STAR DAILY</span><span>每天，发现新项目。</span></footer>

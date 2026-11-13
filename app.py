@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Local Star Daily web server, backed by SQLite."""
+import datetime as dt
 import json
 import os
 import sqlite3
@@ -20,19 +21,55 @@ def connect():
     db.executescript(SCHEMA)
     return db
 
-def read_edition(day=None):
+def read_edition(day=None, period='daily'):
+    if period not in ('daily', 'weekly'):
+        raise ValueError('Invalid period')
     with connect() as db:
+        # Keep the dates, edition and rows consistent if a collector writes concurrently.
+        db.execute('BEGIN')
         dates = [row['date'] for row in db.execute('SELECT date FROM editions ORDER BY date DESC')]
         selected = day or (dates[0] if dates else None)
         edition = db.execute('SELECT * FROM editions WHERE date=?', (selected,)).fetchone() if selected else None
-        rows = db.execute('SELECT rank,name,url,description,language,total_stars,daily_stars FROM repositories WHERE edition_date=? ORDER BY rank', (selected,)).fetchall() if edition else []
-        return {'dates': dates, 'edition': dict(edition) if edition else None, 'repositories': [dict(row) for row in rows]}
+        result = {'dates': dates, 'edition': dict(edition) if edition else None,
+                  'period': period, 'repositories': []}
+        if not edition:
+            return result
+        if period == 'daily':
+            rows = db.execute('SELECT rank,name,url,description,language,total_stars,daily_stars FROM repositories WHERE edition_date=? ORDER BY rank', (selected,)).fetchall()
+            result['repositories'] = [dict(row) for row in rows]
+            return result
+
+        # The selected day and six previous calendar days form the window.
+        start = (dt.date.fromisoformat(selected) - dt.timedelta(days=6)).isoformat()
+        available = db.execute('SELECT COUNT(*) FROM editions WHERE date BETWEEN ? AND ?', (start, selected)).fetchone()[0]
+        rows = db.execute('''SELECT edition_date,name,url,description,language,total_stars,daily_stars
+                             FROM repositories WHERE edition_date BETWEEN ? AND ?
+                             ORDER BY edition_date DESC, rank ASC''', (start, selected)).fetchall()
+        projects = {}
+        for row in rows:
+            key = row['name'].casefold()
+            if key not in projects:
+                projects[key] = {field: row[field] for field in ('name', 'url', 'description', 'language', 'total_stars')}
+                projects[key].update(period_stars=0, appearances=0)
+            projects[key]['period_stars'] += row['daily_stars']
+            projects[key]['appearances'] += 1
+        ranked = sorted(projects.values(), key=lambda item: (-item['period_stars'], item['name'].casefold()))[:20]
+        for rank, item in enumerate(ranked, 1):
+            item['rank'] = rank
+        result['repositories'] = ranked
+        result['window'] = {'start': start, 'end': selected, 'available_days': available, 'total_days': 7}
+        return result
 
 class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
         url = urlparse(self.path)
         if url.path == '/api/editions':
-            data = read_edition(parse_qs(url.query).get('date', [None])[0])
+            params = parse_qs(url.query)
+            try:
+                data = read_edition(params.get('date', [None])[0], params.get('period', ['daily'])[0])
+            except ValueError:
+                self.respond(400, b'Invalid period', 'text/plain; charset=utf-8')
+                return
             self.respond(200, json.dumps(data, ensure_ascii=False).encode(), 'application/json; charset=utf-8')
         elif url.path in ('/', '/style.css', '/app.js', '/mark.svg'):
             filename = 'index.html' if url.path == '/' else url.path[1:]
