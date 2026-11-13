@@ -54,12 +54,29 @@ class WeeklyRankingTests(unittest.TestCase):
         self.assertEqual([r['name'] for r in rows[:3]], ['owner/repo24', 'owner/repo22', 'owner/repo23'])
         self.assertEqual(rows[-1]['rank'], 20)
 
+    def test_30_day_window_includes_both_boundaries_and_reports_missing_days(self):
+        self.add_edition('2026-10-14', [('a/repo', 10000, 'outside window')])
+        self.add_edition('2026-10-15', [('a/repo', 20, 'first day')])
+        self.add_edition('2026-11-07', [('A/Repo', 30, 'middle day')])
+        self.add_edition('2026-11-13', [('a/repo', 50, 'last day'), ('b/repo', 110, 'b')])
+
+        result = app.read_edition('2026-11-13', '30day')
+        self.assertEqual(result['window'], {'start': '2026-10-15', 'end': '2026-11-13', 'available_days': 3, 'total_days': 30})
+        self.assertEqual([(r['name'], r['period_stars']) for r in result['repositories']], [('b/repo', 110), ('a/repo', 100)])
+        self.assertEqual(result['repositories'][1]['appearances'], 3)
+        self.assertEqual(result['repositories'][1]['description'], 'last day')
+
+        historical = app.read_edition('2026-11-07', '30day')
+        self.assertEqual(historical['window']['start'], '2026-10-09')
+        self.assertEqual(historical['repositories'][0]['period_stars'], 10050)
+        self.assertEqual(historical['repositories'][0]['description'], 'middle day')
+
     def test_empty_unknown_date_and_invalid_period(self):
         self.assertIsNone(app.read_edition(period='weekly')['edition'])
         self.add_edition('2026-11-13', [('a/b', 12, 'project')])
         self.assertEqual(app.read_edition('2026-11-12', 'weekly')['repositories'], [])
         with self.assertRaises(ValueError):
-            app.read_edition(period='monthly')
+            app.read_edition(period='yearly')
 
 
 if __name__ == '__main__':

@@ -12,6 +12,7 @@ ROOT = Path(__file__).resolve().parent
 DB = Path(os.environ.get('STAR_DAILY_DB', ROOT / 'data' / 'stars.db'))
 SCHEMA = '''CREATE TABLE IF NOT EXISTS editions (date TEXT PRIMARY KEY, collected_at TEXT NOT NULL, source TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS repositories (edition_date TEXT NOT NULL REFERENCES editions(date) ON DELETE CASCADE, rank INTEGER NOT NULL, name TEXT NOT NULL, url TEXT NOT NULL, description TEXT NOT NULL, language TEXT, total_stars INTEGER NOT NULL, daily_stars INTEGER NOT NULL, PRIMARY KEY (edition_date, rank));'''
+PERIOD_DAYS = {'daily': 1, 'weekly': 7, '30day': 30}
 
 def connect():
     DB.parent.mkdir(parents=True, exist_ok=True)
@@ -22,7 +23,7 @@ def connect():
     return db
 
 def read_edition(day=None, period='daily'):
-    if period not in ('daily', 'weekly'):
+    if period not in PERIOD_DAYS:
         raise ValueError('Invalid period')
     with connect() as db:
         # Keep the dates, edition and rows consistent if a collector writes concurrently.
@@ -39,8 +40,9 @@ def read_edition(day=None, period='daily'):
             result['repositories'] = [dict(row) for row in rows]
             return result
 
-        # The selected day and six previous calendar days form the window.
-        start = (dt.date.fromisoformat(selected) - dt.timedelta(days=6)).isoformat()
+        # The selected day and preceding calendar days form the window.
+        days = PERIOD_DAYS[period]
+        start = (dt.date.fromisoformat(selected) - dt.timedelta(days=days - 1)).isoformat()
         available = db.execute('SELECT COUNT(*) FROM editions WHERE date BETWEEN ? AND ?', (start, selected)).fetchone()[0]
         rows = db.execute('''SELECT edition_date,name,url,description,language,total_stars,daily_stars
                              FROM repositories WHERE edition_date BETWEEN ? AND ?
@@ -57,7 +59,7 @@ def read_edition(day=None, period='daily'):
         for rank, item in enumerate(ranked, 1):
             item['rank'] = rank
         result['repositories'] = ranked
-        result['window'] = {'start': start, 'end': selected, 'available_days': available, 'total_days': 7}
+        result['window'] = {'start': start, 'end': selected, 'available_days': available, 'total_days': days}
         return result
 
 class Handler(BaseHTTPRequestHandler):
